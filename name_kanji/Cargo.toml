@@ -1,0 +1,8 @@
+[package]
+name = "name_kanji"
+version = "0.1.0"
+authors = ["Motohiko Nagano <motohiko.nagano@gmail.com>"]
+
+[dependencies]
+csv = "*"
+rustc-serialize = "0.3"
