@@ -30,17 +30,38 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
         && query_map.contains_key("first_name")){
         return Ok(Response::with((status::Ok,
             json::encode(&kanji_manager.get_name_counts(
-                query_map.get("last_name").unwrap().get(0).unwrap(),
                 query_map.get("first_name").unwrap().get(0).unwrap(),
+                query_map.get("last_name").unwrap().get(0).unwrap(),
                 match query_map.get("is_male") {
                     Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
                     None => true
                 }
             )).unwrap())));
+    }else if (query_map.contains_key("writing_count")){
+        return Ok(Response::with((status::Ok,
+            json::encode(&kanji_manager.get_name_candidates(
+                query_map.get("last_name").unwrap().get(0).unwrap(),
+                query_map.get("writing_count").unwrap().get(0).unwrap().parse::<u32>().unwrap_or(1),
+                match query_map.get("is_male") {
+                    Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
+                    None => true
+                },
+                match query_map.get("offset") {
+                    Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(0),
+                    None => 0
+                },
+                match query_map.get("limit") {
+                    Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(10),
+                    None => 10
+                })).unwrap())));
     }else{
-        let count: u32 =
-        kanji_manager.get_writing_count(query_map.get(&"last_name".to_string()).unwrap().get(0).unwrap());
-        return Ok(Response::with((status::Ok, format!("count:{}", count))));
+        return Ok(Response::with((status::Ok,
+            json::encode(&kanji_manager.get_lucky_point_candidates(
+                query_map.get("last_name").unwrap().get(0).unwrap(),
+                match query_map.get("is_male") {
+                    Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
+                    None => true
+                })).unwrap())));
     }
 }
 

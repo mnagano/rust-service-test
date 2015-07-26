@@ -5,7 +5,9 @@
       <paths name="sakura">
         <serverdata>
           <mappings>
-            <mapping deploy="/home/mnagano/work/rust01/rust-service-test" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/home/mnagano/work/rust01/rust-service-test" local="$PROJECT_DIR$" web="/api" />
+            <mapping deploy="/usr/local/share/www" local="$PROJECT_DIR$/pages" web="/" />
+            <mapping local="" />
           </mappings>
         </serverdata>
       </paths>

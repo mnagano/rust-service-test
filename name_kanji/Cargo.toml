@@ -6,3 +6,5 @@ authors = ["Motohiko Nagano <motohiko.nagano@gmail.com>"]
 [dependencies]
 csv = "*"
 rustc-serialize = "0.3"
+log = "*"
+env_logger = "*"
