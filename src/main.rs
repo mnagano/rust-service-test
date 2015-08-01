@@ -10,8 +10,10 @@ use rustc_serialize::json;
 use iron::*;
 use router::*;
 use logger::Logger;
-use urlencoded::UrlEncodedBody;
+// use urlencoded::UrlEncodedBody;
 use urlencoded::UrlEncodedQuery;
+// use std::collections::HashMap;
+use std::{mem};
 
 fn root_handler(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, "top")))
@@ -22,78 +24,86 @@ fn api_handler(_: &mut Request) -> IronResult<Response> {
 }
 
 fn name_handler(req: &mut Request) -> IronResult<Response> {
-    let kanji_manager =
-        NameKanjiManager::load_csv(&"./characters.csv".to_string(), &"./lucky.csv".to_string());
-    let query_map = req.get_ref::<UrlEncodedQuery>().unwrap();
-    println!("{:?}", query_map);
-    if (query_map.contains_key("last_name")
-        && query_map.contains_key("first_name")){
-        return Ok(Response::with((status::Ok,
-            json::encode(&kanji_manager.get_name_counts(
-                query_map.get("first_name").unwrap().get(0).unwrap(),
-                query_map.get("last_name").unwrap().get(0).unwrap(),
-                match query_map.get("is_male") {
-                    Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
-                    None => true
-                }
-            )).unwrap())));
-    }else if (query_map.contains_key("writing_count")){
-        return Ok(Response::with((status::Ok,
-            json::encode(&kanji_manager.get_name_candidates(
-                query_map.get("last_name").unwrap().get(0).unwrap(),
-                query_map.get("writing_count").unwrap().get(0).unwrap().parse::<u32>().unwrap_or(1),
-                match query_map.get("is_male") {
-                    Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
-                    None => true
-                },
-                match query_map.get("offset") {
-                    Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(0),
-                    None => 0
-                },
-                match query_map.get("limit") {
-                    Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(10),
-                    None => 10
-                })).unwrap())));
-    }else{
-        return Ok(Response::with((status::Ok,
-            json::encode(&kanji_manager.get_lucky_point_candidates(
-                query_map.get("last_name").unwrap().get(0).unwrap(),
-                match query_map.get("is_male") {
-                    Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
-                    None => true
-                })).unwrap())));
+    let kanji_manager = NameKanjiManager::load_csv("./characters.csv", "./lucky.csv");
+    let result = req.get_ref::<UrlEncodedQuery>();
+    if result.is_err() {
+        return Ok(Response::with((status::NotFound, "no query")));
+    }
+    let query_map = result.unwrap();
+    if !query_map.contains_key("last_name") {
+        return Ok(Response::with((status::NotFound, "last_name")));
+    }
+    let last_name = query_map.get("last_name").unwrap().get(0).unwrap();
+    if last_name.len() == 0 {
+        return Ok(Response::with((status::NotFound, "last_name")));
+    }
+    if !query_map.contains_key("is_male") {
+        return Ok(Response::with((status::NotFound, "is_male")));
+    }
+    let is_male = match query_map.get("is_male") {
+        Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
+        None => true
+    };
+
+    // 名前を含む場合は姓名診断
+    if query_map.contains_key("first_name") {
+        let name_count_result =
+            kanji_manager.get_name_counts(query_map.get("first_name").unwrap().get(0).unwrap(),
+                                          last_name, is_male);
+        if name_count_result.is_err() {
+            return Ok(Response::with((status::NotFound,
+                                      json::encode(&name_count_result.err().unwrap()).unwrap())));
+        }
+        return Ok(Response::with((status::Ok, json::encode(&name_count_result.unwrap()).unwrap())));
+        // 名前を含まず画数を含む場合は画数での名前リスト検索
+    } else if query_map.contains_key("writing_count") {
+        let writing_count_option = query_map.get("writing_count").unwrap().get(0).unwrap().parse::<u32>();
+        if writing_count_option.is_err() {
+            return Ok(Response::with((status::BadRequest, "writing_count")));
+        }
+        let writing_count = writing_count_option.unwrap();
+        if writing_count < 1 || writing_count > 81 {
+            return Ok(Response::with((status::BadRequest, "writing_count")));
+        }
+        let offset = match query_map.get("offset") {
+            Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(0),
+            None => 0
+        };
+         let limit = match query_map.get("limit") {
+            Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(200),
+            None => 200
+        };
+        if offset > 100000 {
+            return Ok(Response::with((status::BadRequest, "offset")));
+        }
+        if limit > 2000 {
+            return Ok(Response::with((status::BadRequest, "limit")));
+        }
+        return Ok(Response::with((status::Ok, json::encode(&kanji_manager.get_name_candidates(
+                                                 last_name, writing_count, is_male, offset, limit))
+                                                  .unwrap())));
+        // 名前を含まず画数を含む場合は画数での名前リスト検索
+    } else {
+        let count_list_result = kanji_manager.get_lucky_point_candidates(last_name,is_male);
+        return Ok(Response::with((status::Ok, json::encode(&count_list_result).unwrap())));
     }
 }
 
-fn api_post_handler(req: &mut Request) -> IronResult<Response> {
-    match req.get_ref::<UrlEncodedBody>() {
-        Ok(ref hashmap) => println!("Parsed POST request body:\n {:?}", hashmap),
-        Err(ref e) => println!("{:?}", e)
-    };
-    Ok(Response::with((status::Ok, "api_post")))
-}
-
-fn query_handler(req: &mut Request) -> IronResult<Response> {
-    println!("{:?}", &req);
-    match req.get_ref::<UrlEncodedQuery>() {
-        Ok(ref hashmap) => println!("Parsed GET request query:\n {:?}", hashmap),
-        Err(ref e) => println!("{:?}", e)
-    };
-    let query_params = req.get_ref::<UrlEncodedQuery>().unwrap();
-    println!("{:?}", query_params);
-    // let mut query = req.extensions.get::<Router>().unwrap().find("query").unwrap_or("/");
-    Ok(Response::with((status::Ok, format!("query"))))
-}
+// fn api_post_handler(req: &mut Request) -> IronResult<Response> {
+//     match req.get_ref::<UrlEncodedBody>() {
+//         Ok(ref hashmap) => println!("Parsed POST request body:\n {:?}", hashmap),
+//         Err(ref e) => println!("{:?}", e)
+//     };
+//     Ok(Response::with((status::Ok, "api_post")))
+// }
 
 fn main() {
     let logger = Logger::new(None);
     let mut router = Router::new();
-
     router.get("/", root_handler);
     router.get("/api", api_handler);
     router.get("/names", name_handler);
-    router.post("/api", api_post_handler);
-    router.get("/:query", query_handler);
+    // router.post("/api", api_post_handler);
     let mut chain = Chain::new(router);
     chain.link(logger);
     Iron::new(chain).http("127.0.0.1:4000").unwrap();
