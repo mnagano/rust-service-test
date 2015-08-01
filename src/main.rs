@@ -13,7 +13,6 @@ use logger::Logger;
 // use urlencoded::UrlEncodedBody;
 use urlencoded::UrlEncodedQuery;
 // use std::collections::HashMap;
-use std::{mem};
 
 fn root_handler(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, "top")))
