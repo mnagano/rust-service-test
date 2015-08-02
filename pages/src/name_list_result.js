@@ -11,6 +11,8 @@ var NameListForm = React.createClass({
             lastName: '長野',
             lastNameInputStatus: true,
             isMaleIndex: 0,
+            isNewCountIndex: 0,
+            isIncludeKanaIndex: 0,
             offset: 0,
             offsetInputStatus: true,
             limit: 200,
@@ -47,6 +49,16 @@ var NameListForm = React.createClass({
             isMaleIndex: index
         });
     },
+    handleIsNewCountChange: function (e, index) {
+        this.setState({
+            isNewCountIndex: index
+        });
+    },
+    handleIsIncludeKanaChange: function (e, index) {
+        this.setState({
+            isIncludeKanaIndex: index
+        });
+    },
     handleSubmit: function (e) {
         e.preventDefault();
         var writingCount = this.state.writingCount;
@@ -54,7 +66,9 @@ var NameListForm = React.createClass({
         var isMail = this.state.isMaleIndex == 0;
         var offset = this.state.offset;
         var limit = this.state.limit;
-        this.props.onFormSubmit(lastName, isMail, writingCount, offset, limit);
+        var isNewCount = this.state.isNewCountIndex != 0;
+        var isIncludeKana = this.state.isIncludeKanaIndex != 0;
+        this.props.onFormSubmit(lastName, isMail, writingCount, isNewCount, isIncludeKana, offset, limit);
     },
     render: function () {
         var disabled = !this.state.lastNameInputStatus
@@ -75,6 +89,12 @@ var NameListForm = React.createClass({
                              onChange={this.handleIsMaleChange}/>
                 <TextInput id="writingCount" name="名前の画数 : " placeholder="名前の画数" min={1} max={81}
                            onChange={this.handleWritingCountChange}>{this.state.writingCount}</TextInput>
+                <RadioButton id="isNewCountRadios" name="字体: " buttons={["旧字体", "新字体"]}
+                             currentIndex={this.state.isNewCountIndex}
+                             onChange={this.handleIsNewCountChange}/>
+                <RadioButton id="isIncludeKanaRadios" name="平仮名,片仮名を含むか: " buttons={["含まない", "含む"]}
+                             currentIndex={this.state.isIncludeKanaIndex}
+                             onChange={this.handleIsIncludeKanaChange}/>
                 <TextInput id="offset" name="offset : " placeholder="オフセット(0スタート)" min={0} max={99999}
                            onChange={this.handleOffsetChange}>{this.state.offset}</TextInput>
                 <TextInput id="limit" name="limit : " placeholder="取得個数" min={1} max={2000}
@@ -137,7 +157,7 @@ var NameListResult = React.createClass({
         };
     },
 
-    handleFormSubmit: function (lastName, isMale, writingCount, offset, limit) {
+    handleFormSubmit: function (lastName, isMale, writingCount, isNewCount, isIncludeKana, offset, limit) {
         this.setState({
             loaded: false
         });
@@ -145,6 +165,8 @@ var NameListResult = React.createClass({
             + 'last_name=' + lastName
             + '&writing_count=' + writingCount
             + '&is_male=' + isMale
+            + '&is_new_count=' + isNewCount
+            + '&is_include_kana=' + isIncludeKana
             + '&offset=' + offset
             + '&limit=' + limit;
 
@@ -240,30 +262,30 @@ var NameListResult = React.createClass({
 
                 <p className="text-danger bg-danger">{errorText}</p>
                 <Loader loaded={this.state.loaded}>
-                <table className="table table-striped table-bordered">
-                    <thead>
-                    <tr>
-                        <th>名前</th>
-                        <th>各文字の画数</th>
-                        <th>天運画数</th>
-                        <th>地運画数</th>
-                        <th>人運画数</th>
-                        <th>外運画数</th>
-                        <th>総運画数</th>
-                        <th>天運</th>
-                        <th>地運</th>
-                        <th>人運</th>
-                        <th>外運</th>
-                        <th>総運</th>
-                        <th>陰陽</th>
-                        <th>トータル</th>
-                    </tr>
-                    </thead>
-                    < tbody >
-                    {results}
-                    </tbody >
-                </table>
-            </Loader>
+                    <table className="table table-striped table-bordered">
+                        <thead>
+                        <tr>
+                            <th>名前</th>
+                            <th>各文字の画数</th>
+                            <th>天運画数</th>
+                            <th>地運画数</th>
+                            <th>人運画数</th>
+                            <th>外運画数</th>
+                            <th>総運画数</th>
+                            <th>天運</th>
+                            <th>地運</th>
+                            <th>人運</th>
+                            <th>外運</th>
+                            <th>総運</th>
+                            <th>陰陽</th>
+                            <th>トータル</th>
+                        </tr>
+                        </thead>
+                        < tbody >
+                        {results}
+                        </tbody >
+                    </table>
+                </Loader>
             </div>
         );
     }

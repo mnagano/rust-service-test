@@ -8,7 +8,8 @@ var CountForm = React.createClass({
         return {
             lastName: '長野',
             lastNameInputStatus: true,
-            isMaleIndex: 0
+            isMaleIndex: 0,
+            isNewCountIndex: 0
         };
     },
     handleLastNameChange: function (e, validationResult) {
@@ -23,11 +24,17 @@ var CountForm = React.createClass({
             isMaleIndex: index
         });
     },
+    handleIsNewCountChange: function (e, index) {
+        this.setState({
+            isNewCountIndex: index
+        });
+    },
     handleSubmit: function (e) {
         e.preventDefault();
         var lastName = this.state.lastName.trim();
         var isMail = this.state.isMaleIndex == 0;
-        this.props.onFormSubmit(lastName, isMail);
+        var isNewCount = this.state.isNewCountIndex != 0;
+        this.props.onFormSubmit(lastName, isMail, isNewCount);
     },
     render: function () {
         var disabled = !this.state.lastNameInputStatus;
@@ -44,6 +51,10 @@ var CountForm = React.createClass({
 
                 <RadioButton id="isMaleRadios" name="性別: " buttons={["男", "女"]} currentIndex={this.state.isMaleIndex}
                              onChange={this.handleIsMaleChange}/>
+
+                <RadioButton id="isNewCountRadios" name="字体: " buttons={["旧字体", "新字体"]}
+                             currentIndex={this.state.isNewCountIndex}
+                             onChange={this.handleIsNewCountChange}/>
 
                 <div className="form-group">
                     <div className="col-sm-offset-2 col-sm-10">
@@ -108,13 +119,14 @@ var CountResult = React.createClass({
         });
     },
 
-    handleFormSubmit: function (lastName, isMale) {
+    handleFormSubmit: function (lastName, isMale, isNewCount) {
         this.setState({
             loaded: false
         });
         var url = '/api/names?'
             + 'last_name=' + lastName
-            + '&is_male=' + isMale;
+            + '&is_male=' + isMale
+            + '&is_new_count=' + isNewCount;
 
         //console.log(url);
         $.ajax({

@@ -17,7 +17,7 @@ use urlencoded::UrlEncodedQuery;
 
 lazy_static!{
     static ref KANJI_MANAGER: NameKanjiManager = {
-        NameKanjiManager::load_csv("./characters.csv", "./lucky.csv")
+        NameKanjiManager::load_csv("./kanji.csv", "./hiragana.csv", "./lucky.csv")
     };
 }
 
@@ -50,19 +50,26 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
         None => true
     };
 
+    let is_new_count = match query_map.get("is_new_count") {
+        Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
+        None => true
+    };
+
     // 名前を含む場合は姓名診断
     if query_map.contains_key("first_name") {
         let name_count_result =
             KANJI_MANAGER.get_name_counts(query_map.get("first_name").unwrap().get(0).unwrap(),
-                                          last_name, is_male);
+                                          last_name, is_male, is_new_count);
         if name_count_result.is_err() {
             return Ok(Response::with((status::NotFound,
                                       json::encode(&name_count_result.err().unwrap()).unwrap())));
         }
-        return Ok(Response::with((status::Ok, json::encode(&name_count_result.unwrap()).unwrap())));
+        return Ok(Response::with((status::Ok,
+                                  json::encode(&name_count_result.unwrap()).unwrap())));
         // 名前を含まず画数を含む場合は画数での名前リスト検索
     } else if query_map.contains_key("writing_count") {
-        let writing_count_option = query_map.get("writing_count").unwrap().get(0).unwrap().parse::<u32>();
+        let writing_count_option =
+            query_map.get("writing_count").unwrap().get(0).unwrap().parse::<u32>();
         if writing_count_option.is_err() {
             return Ok(Response::with((status::BadRequest, "writing_count")));
         }
@@ -74,7 +81,7 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
             Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(0),
             None => 0
         };
-         let limit = match query_map.get("limit") {
+        let limit = match query_map.get("limit") {
             Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(200),
             None => 200
         };
@@ -84,12 +91,17 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
         if limit > 2000 {
             return Ok(Response::with((status::BadRequest, "limit")));
         }
+        let is_include_kana = match query_map.get("is_include_kana") {
+            Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
+            None => true
+        };
         return Ok(Response::with((status::Ok, json::encode(&KANJI_MANAGER.get_name_candidates(
-                                                 last_name, writing_count, is_male, offset, limit))
-                                                  .unwrap())));
+                                                 last_name, writing_count, is_male, is_new_count,
+                                                 is_include_kana, offset, limit)).unwrap())));
         // 名前を含まず画数を含む場合は画数での名前リスト検索
     } else {
-        let count_list_result = KANJI_MANAGER.get_lucky_point_candidates(last_name,is_male);
+        let count_list_result =
+            KANJI_MANAGER.get_lucky_point_candidates(last_name, is_male, is_new_count);
         return Ok(Response::with((status::Ok, json::encode(&count_list_result).unwrap())));
     }
 }

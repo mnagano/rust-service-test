@@ -88,13 +88,14 @@ impl NameCounts {
     fn new(first_name: &str,
            last_name: &str,
            is_male: bool,
+           is_new_count: bool,
            kanji_manager: &NameKanjiManager)
            -> Result<NameCounts, Vec<char>> {
         let mut last_name_writing_count_vec = Vec::new();
         let mut first_name_writing_count_vec = Vec::new();
         let mut err_char_vec = Vec::new();
         for c in last_name.chars() {
-            match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c) {
+            match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c, is_new_count) {
                 Some(m) => last_name_writing_count_vec.push(m),
                 None => {
                     println!("kanji not supported.{:?}", &c);
@@ -103,7 +104,7 @@ impl NameCounts {
             }
         }
         for c in first_name.chars() {
-            match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c) {
+            match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c, is_new_count) {
                 Some(m) => first_name_writing_count_vec.push(m),
                 None => {
                     println!("kanji not supported.{:?}", &c);
@@ -111,14 +112,14 @@ impl NameCounts {
                 }
             }
         }
-        if err_char_vec.len() != 0{
+        if err_char_vec.len() != 0 {
             return Err(err_char_vec);
         }
         Ok(NameCounts::create(first_name, last_name, &first_name_writing_count_vec,
-                           &last_name_writing_count_vec, is_male, kanji_manager))
+                              &last_name_writing_count_vec, is_male, kanji_manager))
     }
 
-    fn cmp_by_total_point(&self, target : &NameCounts) -> Ordering{
+    fn cmp_by_total_point(&self, target: &NameCounts) -> Ordering {
         if self.total_point < target.total_point {
             return Ordering::Less;
         } else if self.total_point > target.total_point {
@@ -138,24 +139,36 @@ pub struct NameKanjiManager {
 }
 
 impl NameKanjiManager {
-    pub fn load_csv(kanji_csv_path: &str, lucky_csv_path: &str) -> NameKanjiManager {
+    pub fn load_csv(kanji_csv_path: &str,
+                    hiragana_csv_path: &str,
+                    lucky_csv_path: &str)
+                    -> NameKanjiManager {
         NameKanjiManager {
             lucky_manager: LuckyManager::load_csv(lucky_csv_path),
-            kanji_manager: KanjiManager::load_csv(kanji_csv_path),
+            kanji_manager: KanjiManager::load_csv(kanji_csv_path, hiragana_csv_path),
         }
     }
 
-    pub fn get_name_counts(&self, first_name: &str, last_name: &str, is_male: bool) -> Result<NameCounts, Vec<char>> {
-        NameCounts::new(first_name, last_name, is_male, self)
+    pub fn get_name_counts(&self,
+                           first_name: &str,
+                           last_name: &str,
+                           is_male: bool,
+                           is_new_count: bool)
+                           -> Result<NameCounts, Vec<char>> {
+        NameCounts::new(first_name, last_name, is_male, is_new_count, self)
     }
 
-    pub fn get_lucky_point_candidates(&self, last_name: &str, is_male: bool) -> Vec<NameCounts> {
+    pub fn get_lucky_point_candidates(&self,
+                                      last_name: &str,
+                                      is_male: bool,
+                                      is_new_count: bool)
+                                      -> Vec<NameCounts> {
         // println!("last_name:{:?}", last_name);
         // println!("is_male:{:?}", is_male);
         // 名字の各漢字の画数取得
         let mut last_name_writing_count_vec = Vec::new();
         for c in last_name.chars() {
-            match self.kanji_manager.get_writing_count_of_kanji(&c) {
+            match self.kanji_manager.get_writing_count_of_kanji(&c, is_new_count) {
                 Some(m) => last_name_writing_count_vec.push(m),
                 None => println!("Not supported:{:?}", &c)
             }
@@ -180,7 +193,8 @@ impl NameKanjiManager {
             }
             let kanji_count = jin_un - last_kanji_count;
             // 名前の最初の文字の画数が人運で決まる。
-            if self.kanji_manager.get_kanji_vec(kanji_count).is_none() { continue; }
+            if self.kanji_manager.get_kanji_vec(kanji_count, is_new_count, true)
+                   .is_none() { continue; }
             // println!("jin_un:{}", jin_un);
             let mut first_name_writing_count_vec = Vec::new();
             first_name_writing_count_vec.push(kanji_count);
@@ -206,12 +220,14 @@ impl NameKanjiManager {
                     if self.lucky_manager.get_lucky_point(gai_un, is_male) < 1 { continue; }
                     for next_kanji_count in (1)..(ti_un - kanji_count + 1) {
                         if next_kanji_count > 29 { continue; }
-                        if self.kanji_manager.get_kanji_vec(next_kanji_count).is_none() { continue; }
+                        if self.kanji_manager.get_kanji_vec(next_kanji_count, is_new_count, true)
+                               .is_none() { continue; }
                         first_name_writing_count_vec.truncate(1);
                         first_name_writing_count_vec.push(next_kanji_count);
                         let next2_kanji_count = ti_un - kanji_count - next_kanji_count;
                         if next2_kanji_count > 0 {
-                            if self.kanji_manager.get_kanji_vec(next2_kanji_count).is_none() { continue; }
+                            if self.kanji_manager.get_kanji_vec(next2_kanji_count, is_new_count,
+                                                                true).is_none() { continue; }
                             first_name_writing_count_vec.push(next2_kanji_count);
                         }
                         // println!("next_kanji_count:{:?}, {:?}", next_kanji_count,next2_kanji_count);
@@ -232,10 +248,13 @@ impl NameKanjiManager {
                                last_name: &str,
                                ti_un: u32,
                                is_male: bool,
+                               is_new_count: bool,
+                               is_include_kana: bool,
                                offset: u32,
                                limit: u32)
                                -> Vec<NameCounts> {
-        let point_vec: Vec<NameCounts> = self.get_lucky_point_candidates("長野", true);
+        let point_vec: Vec<NameCounts> =
+            self.get_lucky_point_candidates(last_name, is_male, is_new_count);
         let mut candidate_vec = Vec::new();
         let mut name_index = 0u32;
         // println!("ti_un:{}", ti_un);
@@ -243,8 +262,8 @@ impl NameKanjiManager {
             // println!("name_index:{}, offset{}, limit{}", name_index, offset, limit);
             if name_index >= (offset + limit) { break; }
             if point_candidate.ti_un != ti_un { continue; }
-            let kanji_vec =
-                match self.kanji_manager.get_kanji_vec(point_candidate.first_name_writing_count_vec[0]) {
+            let kanji_vec = match self.kanji_manager.get_kanji_vec(
+                point_candidate.first_name_writing_count_vec[0], is_new_count, is_include_kana) {
                 Some(m) => m,
                 None => {
                     println!("Not supported count {}",
@@ -257,7 +276,8 @@ impl NameKanjiManager {
                 if name_index >= (offset + limit) { break; }
                 if point_candidate.first_name_writing_count_vec.len() > 1 {
                     let second_kanji_vec = match self.kanji_manager.get_kanji_vec(
-                        point_candidate.first_name_writing_count_vec[1]) {
+                        point_candidate.first_name_writing_count_vec[1], is_new_count,
+                        is_include_kana) {
                         Some(m) => m,
                         None => {
                             println!("Not supported count {}",
@@ -270,7 +290,8 @@ impl NameKanjiManager {
                         if name_index >= (offset + limit) { break; }
                         if point_candidate.first_name_writing_count_vec.len() > 2 {
                             let third_kanji_vec = match self.kanji_manager.get_kanji_vec(
-                                point_candidate.first_name_writing_count_vec[2]) {
+                                point_candidate.first_name_writing_count_vec[2], is_new_count,
+                                is_include_kana) {
                                 Some(m) => m,
                                 None => {
                                     println!("Not supported count {}",
@@ -287,7 +308,7 @@ impl NameKanjiManager {
                                 let first_name =
                                     format!("{}{}{}", first_kanji, second_kanji, third_kanji);
                                 candidate_vec.push(NameCounts::new(&first_name, last_name, is_male,
-                                                                   self).unwrap())
+                                                                   is_new_count, self).unwrap())
                             }
                         } else {
                             name_index += 1;
@@ -296,7 +317,7 @@ impl NameKanjiManager {
                             }
                             let first_name = format!("{}{}", first_kanji, second_kanji);
                             candidate_vec.push(NameCounts::new(&first_name, last_name, is_male,
-                                                               self).unwrap())
+                                                               is_new_count, self).unwrap())
                         }
                     }
                 } else {
@@ -305,7 +326,8 @@ impl NameKanjiManager {
                         continue;
                     }
                     let first_name = format!("{}", first_kanji);
-                    candidate_vec.push(NameCounts::new(&first_name, last_name, is_male, self).unwrap())
+                    candidate_vec.push(NameCounts::new(&first_name, last_name, is_male,
+                                                       is_new_count, self).unwrap())
                 }
             }
         }
@@ -315,9 +337,10 @@ impl NameKanjiManager {
 
 #[test]
 fn it_works() {
-    let kanji_path = "c:/work/rust01/rust-service-test/characters.csv".to_string();
+    let kanji_path = "c:/work/rust01/rust-service-test/kanji.csv".to_string();
+    let hiragana_path = "c:/work/rust01/rust-service-test/hiragana.csv".to_string();
     let lucky_path = "c:/work/rust01/rust-service-test/lucky.csv".to_string();
-    let kanji_manager = NameKanjiManager::load_csv(&kanji_path, &lucky_path);
+    let kanji_manager = NameKanjiManager::load_csv(&kanji_path, &hiragana_path, &lucky_path);
     println!("{:?}", kanji_manager.kanji_manager.get_writing_count_of_kanji(&'林'));
     assert_eq!(*kanji_manager.kanji_manager.get_writing_count_of_kanji(&'林').unwrap(), 8);
     assert_eq!(kanji_manager.kanji_manager.get_writing_count_of_name("小林"), 11);
