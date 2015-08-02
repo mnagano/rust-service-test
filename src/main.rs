@@ -95,9 +95,13 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
             Some(m) => m.get(0).unwrap() != "false" && m.get(0).unwrap() != "0",
             None => true
         };
+        let kanji_num = match query_map.get("kanji_num") {
+            Some(m) => m.get(0).unwrap().parse::<u32>().unwrap_or(2),
+            None => 2
+        };
         return Ok(Response::with((status::Ok, json::encode(&KANJI_MANAGER.get_name_candidates(
                                                  last_name, writing_count, is_male, is_new_count,
-                                                 is_include_kana, offset, limit)).unwrap())));
+                                                 is_include_kana, kanji_num, offset, limit)).unwrap())));
         // 名前を含まず画数を含む場合は画数での名前リスト検索
     } else {
         let count_list_result =

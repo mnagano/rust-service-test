@@ -13,6 +13,7 @@ var NameListForm = React.createClass({
             isMaleIndex: 0,
             isNewCountIndex: 0,
             isIncludeKanaIndex: 0,
+            kanjiNumIndex:1,
             offset: 0,
             offsetInputStatus: true,
             limit: 200,
@@ -59,6 +60,11 @@ var NameListForm = React.createClass({
             isIncludeKanaIndex: index
         });
     },
+    handleKanjiNumChange: function (e, index) {
+        this.setState({
+            kanjiNumIndex: index
+        });
+    },
     handleSubmit: function (e) {
         e.preventDefault();
         var writingCount = this.state.writingCount;
@@ -68,7 +74,8 @@ var NameListForm = React.createClass({
         var limit = this.state.limit;
         var isNewCount = this.state.isNewCountIndex != 0;
         var isIncludeKana = this.state.isIncludeKanaIndex != 0;
-        this.props.onFormSubmit(lastName, isMail, writingCount, isNewCount, isIncludeKana, offset, limit);
+        var kanjiNum = this.state.kanjiNumIndex + 1;
+        this.props.onFormSubmit(lastName, isMail, writingCount, isNewCount, isIncludeKana, kanjiNum, offset, limit);
     },
     render: function () {
         var disabled = !this.state.lastNameInputStatus
@@ -92,6 +99,9 @@ var NameListForm = React.createClass({
                 <RadioButton id="isNewCountRadios" name="字体: " buttons={["旧字体", "新字体"]}
                              currentIndex={this.state.isNewCountIndex}
                              onChange={this.handleIsNewCountChange}/>
+                <RadioButton id="kanjiNumRadios" name="漢字数: " buttons={["1", "2", "3"]}
+                             currentIndex={this.state.kanjiNumIndex}
+                             onChange={this.handleKanjiNumChange}/>
                 <RadioButton id="isIncludeKanaRadios" name="平仮名,片仮名を含むか: " buttons={["含まない", "含む"]}
                              currentIndex={this.state.isIncludeKanaIndex}
                              onChange={this.handleIsIncludeKanaChange}/>
@@ -157,7 +167,7 @@ var NameListResult = React.createClass({
         };
     },
 
-    handleFormSubmit: function (lastName, isMale, writingCount, isNewCount, isIncludeKana, offset, limit) {
+    handleFormSubmit: function (lastName, isMale, writingCount, isNewCount, isIncludeKana, kanjiNum, offset, limit) {
         this.setState({
             loaded: false
         });
@@ -167,6 +177,7 @@ var NameListResult = React.createClass({
             + '&is_male=' + isMale
             + '&is_new_count=' + isNewCount
             + '&is_include_kana=' + isIncludeKana
+            + '&kanji_num=' + kanjiNum
             + '&offset=' + offset
             + '&limit=' + limit;
 

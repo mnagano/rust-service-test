@@ -96,7 +96,14 @@ impl NameCounts {
         let mut err_char_vec = Vec::new();
         for c in last_name.chars() {
             match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c, is_new_count) {
-                Some(m) => last_name_writing_count_vec.push(m),
+                Some(m) => {
+                    if m == 0 {
+                        println!("kanji not supported.{:?}", &c);
+                        err_char_vec.push(c);
+                    } else {
+                        last_name_writing_count_vec.push(m);
+                    }
+                },
                 None => {
                     println!("kanji not supported.{:?}", &c);
                     err_char_vec.push(c);
@@ -105,7 +112,14 @@ impl NameCounts {
         }
         for c in first_name.chars() {
             match kanji_manager.kanji_manager.get_writing_count_of_kanji(&c, is_new_count) {
-                Some(m) => first_name_writing_count_vec.push(m),
+                Some(m) => {
+                    if m == 0 {
+                        println!("kanji not supported.{:?}", &c);
+                        err_char_vec.push(c);
+                    } else {
+                        first_name_writing_count_vec.push(m);
+                    }
+                },
                 None => {
                     println!("kanji not supported.{:?}", &c);
                     err_char_vec.push(c);
@@ -250,6 +264,7 @@ impl NameKanjiManager {
                                is_male: bool,
                                is_new_count: bool,
                                is_include_kana: bool,
+                               kanji_num: u32,
                                offset: u32,
                                limit: u32)
                                -> Vec<NameCounts> {
@@ -259,6 +274,8 @@ impl NameKanjiManager {
         let mut name_index = 0u32;
         // println!("ti_un:{}", ti_un);
         for point_candidate in point_vec {
+            if kanji_num != 0 &&
+               point_candidate.first_name_writing_count_vec.len() as u32 != kanji_num { continue; }
             // println!("name_index:{}, offset{}, limit{}", name_index, offset, limit);
             if name_index >= (offset + limit) { break; }
             if point_candidate.ti_un != ti_un { continue; }
