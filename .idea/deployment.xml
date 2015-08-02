@@ -12,6 +12,7 @@
             <excludedPath local="true" path="$PROJECT_DIR$/target" />
             <excludedPath local="true" path="$PROJECT_DIR$/name_kanji/target" />
             <excludedPath local="true" path="$PROJECT_DIR$/name_kanji_test/target" />
+            <excludedPath local="true" path="$PROJECT_DIR$/pages" />
           </excludedPaths>
         </serverdata>
       </paths>

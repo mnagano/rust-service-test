@@ -1,0 +1,7 @@
+[package]
+name = "name_kanji_test"
+version = "0.1.0"
+authors = ["Motohiko Nagano <motohiko.nagano@gmail.com>"]
+
+[dependencies.name_kanji]
+path = "../name_kanji"
