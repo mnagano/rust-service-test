@@ -14,6 +14,7 @@ version = "*"
 router = "*"
 logger = "*"
 rustc-serialize = "0.3"
+lazy_static = "*"
 
 [dependencies.urlencoded]
 version = "*"

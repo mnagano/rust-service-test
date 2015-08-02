@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate lazy_static;
+
 extern crate iron;
 extern crate router;
 extern crate logger;
@@ -10,9 +13,13 @@ use rustc_serialize::json;
 use iron::*;
 use router::*;
 use logger::Logger;
-// use urlencoded::UrlEncodedBody;
 use urlencoded::UrlEncodedQuery;
-// use std::collections::HashMap;
+
+lazy_static!{
+    static ref KANJI_MANAGER: NameKanjiManager = {
+        NameKanjiManager::load_csv("./characters.csv", "./lucky.csv")
+    };
+}
 
 fn root_handler(_: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, "top")))
@@ -23,7 +30,6 @@ fn api_handler(_: &mut Request) -> IronResult<Response> {
 }
 
 fn name_handler(req: &mut Request) -> IronResult<Response> {
-    let kanji_manager = NameKanjiManager::load_csv("./characters.csv", "./lucky.csv");
     let result = req.get_ref::<UrlEncodedQuery>();
     if result.is_err() {
         return Ok(Response::with((status::NotFound, "no query")));
@@ -47,7 +53,7 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
     // 名前を含む場合は姓名診断
     if query_map.contains_key("first_name") {
         let name_count_result =
-            kanji_manager.get_name_counts(query_map.get("first_name").unwrap().get(0).unwrap(),
+            KANJI_MANAGER.get_name_counts(query_map.get("first_name").unwrap().get(0).unwrap(),
                                           last_name, is_male);
         if name_count_result.is_err() {
             return Ok(Response::with((status::NotFound,
@@ -78,12 +84,12 @@ fn name_handler(req: &mut Request) -> IronResult<Response> {
         if limit > 2000 {
             return Ok(Response::with((status::BadRequest, "limit")));
         }
-        return Ok(Response::with((status::Ok, json::encode(&kanji_manager.get_name_candidates(
+        return Ok(Response::with((status::Ok, json::encode(&KANJI_MANAGER.get_name_candidates(
                                                  last_name, writing_count, is_male, offset, limit))
                                                   .unwrap())));
         // 名前を含まず画数を含む場合は画数での名前リスト検索
     } else {
-        let count_list_result = kanji_manager.get_lucky_point_candidates(last_name,is_male);
+        let count_list_result = KANJI_MANAGER.get_lucky_point_candidates(last_name,is_male);
         return Ok(Response::with((status::Ok, json::encode(&count_list_result).unwrap())));
     }
 }

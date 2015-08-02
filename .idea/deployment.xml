@@ -6,9 +6,13 @@
         <serverdata>
           <mappings>
             <mapping deploy="/home/mnagano/work/rust01/rust-service-test" local="$PROJECT_DIR$" web="/api" />
-            <mapping deploy="/usr/local/share/www" local="$PROJECT_DIR$/pages" web="/" />
             <mapping local="" />
           </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/target" />
+            <excludedPath local="true" path="$PROJECT_DIR$/name_kanji/target" />
+            <excludedPath local="true" path="$PROJECT_DIR$/name_kanji_test/target" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>
